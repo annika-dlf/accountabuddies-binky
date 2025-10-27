@@ -71,28 +71,44 @@ small {
   padding: 56px 20px;
   display: flex;
   width: 353px;
-  height: 740px;
+  height: 85vh;
   flex-direction: column;
   justify-content: end;
   align-items: center;
-  background-size: 393px 852px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center; /* horizontal center */
+  align-items: center;     /* vertical center */
+  background-size: cover;      /* fills viewport while keeping aspect ratio */
   background-repeat: no-repeat;
+  background-position: center;
 }
 
-/* Default (used by App + Timer) */
-.screen_default-blue {
-  background-image: url(../public/mobile_default-blue.png);
+.default{
+  background-image: url('../public/mobile_default-blue.png');
 }
 
-/* Success screen */
-.screen_success-blue {
+.success {
   background-image: url(../public/mobile_success-blue.png);
 }
 
-/* Failed screen */
-.screen_failed {
+.failed {
   background-image: url(../public/mobile_failed.png);
 }
+
+.Container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 399px;
+  gap: 20px;
+  align-self: stretch;
+}
+
 
 .Container {
   display: flex;

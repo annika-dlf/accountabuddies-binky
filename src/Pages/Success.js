@@ -62,6 +62,7 @@ function Success() {
   const newQPI = currentQPI.toFixed(2);
 
   return (
+  <body className="success">
     <Screen>
       <Charac />
       <div className="Container">
@@ -79,6 +80,7 @@ function Success() {
         />
       </div>
     </Screen>
+  </body>
   );
 }
 

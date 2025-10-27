@@ -99,6 +99,7 @@ function Failed() {
   const newQPI = currentQPI.toFixed(2);
 
   return (
+  <body className="failed">
     <Screen>
       <Charac />
       <div className="Container">
@@ -122,6 +123,7 @@ function Failed() {
         />
       </div>
     </Screen>
+  </body>
   );
 }
 
