@@ -73,8 +73,11 @@ small {
   width: 353px;
   height: 85vh;
   flex-direction: column;
-  justify-content: end;
+  /* justify-content: end; */
   align-items: center;
+  height: 90%;
+  width: calc(var(--vw, 1vw) * 90);
+  overflow: hidden;
 }
 
 body {
@@ -159,7 +162,7 @@ body {
 .ActionWrapper {
   background-color: white;
   display: flex;
-  width: 353px;
+  width: 100%;
   min-height: 59px;
   justify-content: space-between;
   align-items: center;

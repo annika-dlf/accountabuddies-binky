@@ -1,107 +1,94 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import NoSleep from "nosleep.js";
 import Charac from "../Components/Charac";
 import TimerDisplay from "../Components/TimerDisplay";
 import SlideToExit from "../Components/SlideToExit";
-import "../App.css";
 import Screen from "../Components/Screen";
+import "../App.css";
 import { calculateQPIChange } from "../Utils/calculateQPIChange";
 
 function Timer() {
   const location = useLocation();
   const navigate = useNavigate();
-
   const { activeTime, resumeTime } = location.state || { activeTime: 0, resumeTime: null };
-  const [secondsLeft, setSecondsLeft] = useState(resumeTime ?? activeTime * 60);
-  const [wakeLock, setWakeLock] = useState(null);
 
-  // ✅ Keep screen awake while on Timer page
+  const totalSeconds = useRef(activeTime * 60);
+  const [secondsLeft, setSecondsLeft] = useState(resumeTime ?? totalSeconds.current);
+  const endTimeRef = useRef(Date.now() + (resumeTime ?? totalSeconds.current) * 1000);
+  const noSleepRef = useRef(null);
+
+  const handleTimerEnd = useCallback(() => {
+    const minutesLeft = 0;
+    const qpiChange = calculateQPIChange(totalSeconds.current, 0);
+    localStorage.removeItem("remainingTime");
+    localStorage.removeItem("activeTime");
+    navigate("/success", { state: { selectedMinutes: activeTime, minutesLeft, qpiChange } });
+  }, [activeTime, navigate]);
+
   useEffect(() => {
-    let lock = null;
-
-    const requestWakeLock = async () => {
+    const enableNoSleep = () => {
+      if (!noSleepRef.current) {
+        noSleepRef.current = new NoSleep();
+      }
       try {
-        if ("wakeLock" in navigator) {
-          lock = await navigator.wakeLock.request("screen");
-          setWakeLock(lock);
-          console.log("✅ Screen wake lock active");
-        } else {
-          console.warn("⚠️ Wake Lock API not supported in this browser.");
-        }
+        noSleepRef.current.enable(); 
+        console.log("✅ Screen wake lock (NoSleep) enabled");
       } catch (err) {
-        console.error("WakeLock Error:", err.name, err.message);
+        console.warn("Failed to enable NoSleep:", err);
       }
     };
 
-    requestWakeLock();
-
-    // Reacquire wake lock if page/tab becomes visible again
-    const handleVisibilityChange = () => {
-      if (wakeLock !== null && document.visibilityState === "visible") {
-        requestWakeLock();
+    const disableNoSleep = () => {
+      if (noSleepRef.current) {
+        noSleepRef.current.disable();
+        console.log("🔓 Screen wake lock (NoSleep) disabled");
       }
     };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Cleanup
+    const timeout = setTimeout(enableNoSleep, 1000);
+
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (lock) {
-        lock.release().then(() => console.log("🔒 Screen wake lock released"));
-      }
+      clearTimeout(timeout);
+      disableNoSleep();
     };
-  }, [wakeLock]);
+  }, []);
 
-  // ✅ Countdown logic
+  // ✅ Countdown effect
   useEffect(() => {
-    if (secondsLeft <= 0) {
-      const minutesLeft = 0;
-      const qpiChange = calculateQPIChange(activeTime * 60, 0);
-
-      localStorage.removeItem("remainingTime");
-      localStorage.removeItem("activeTime");
-
-      navigate("/success", {
-        state: { selectedMinutes: activeTime, minutesLeft, qpiChange },
-      });
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setSecondsLeft((prev) => prev - 1);
-    }, 1000);
-
+    const tick = () => {
+      const remaining = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining <= 0) handleTimerEnd();
+    };
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [secondsLeft, activeTime, navigate]);
+  }, [handleTimerEnd]);
 
-  // ✅ Format mm:ss
-  const minutes = Math.floor(secondsLeft / 60);
-  const seconds = secondsLeft % 60;
-  const formattedTime = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-
-  // ✅ Handle slide to exit
+  // ✅ Slide-to-exit logic
   const handleSlideComplete = () => {
     localStorage.setItem("remainingTime", secondsLeft);
     localStorage.setItem("activeTime", activeTime);
 
-    const totalSeconds = activeTime * 60;
-    const qpiChange = calculateQPIChange(totalSeconds, secondsLeft);
-    const timeSpent = totalSeconds - secondsLeft;
-    const halfwayPoint = totalSeconds / 2;
+    const qpiChange = calculateQPIChange(totalSeconds.current, secondsLeft);
+    const timeSpent = totalSeconds.current - secondsLeft;
+    const halfwayPoint = totalSeconds.current / 2;
+    const minutes = Math.floor(secondsLeft / 60);
 
     if (timeSpent > halfwayPoint + 60) {
-      navigate("/success", {
-        state: { qpiChange, selectedMinutes: activeTime, minutesLeft: minutes },
-      });
+      navigate("/success", { state: { qpiChange, selectedMinutes: activeTime, minutesLeft: minutes } });
     } else {
-      navigate("/failed", {
-        state: { qpiChange, selectedMinutes: activeTime, minutesLeft: minutes },
-      });
+      navigate("/failed", { state: { qpiChange, selectedMinutes: activeTime, minutesLeft: minutes } });
     }
   };
 
+  // ✅ Time formatting
+  const minutes = Math.floor(secondsLeft / 60);
+  const seconds = secondsLeft % 60;
+  const formattedTime = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
   return (
-      <body className="default">
+    <body className="default">
       <Screen>
         <Charac />
         <div className="Container">
@@ -109,10 +96,8 @@ function Timer() {
           <SlideToExit onSlideComplete={handleSlideComplete} />
         </div>
       </Screen>
-      </body>
+    </body>
   );
 }
 
 export default Timer;
-
-
